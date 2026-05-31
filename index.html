@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Запуск VS Code</title>
+    <title>Управление ноутбуком</title>
     <style>
         body {
             font-family: sans-serif;
@@ -19,9 +19,9 @@
             cursor: pointer;
             border-radius: 12px;
             border: none;
-            background: #007acc; /* Фирменный цвет VS Code */
+            background: #2ecc71; /* Зеленая кнопка */
             color: white;
-            box-shadow: 0 4px 20px rgba(0, 122, 204, 0.4);
+            box-shadow: 0 4px 20px rgba(46, 204, 113, 0.4);
             transition: 0.2s;
         }
         button:active { transform: scale(0.98); }
@@ -31,7 +31,7 @@
 </head>
 <body>
 
-    <h1>Голосовой запуск VS Code</h1>
+    <h1>Голосовое управление</h1>
     <button id="start-btn">🎙️ Включить микрофон</button>
     <p id="status">Нажмите кнопку и скажите команду</p>
     <p id="text"></p>
@@ -45,14 +45,13 @@
         const statusText = document.getElementById('status');
         const recognizedText = document.getElementById('text');
 
-        // Подключаем распознавание речи браузера
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (!SpeechRecognition) {
-            statusText.innerText = "Браузер не поддерживает голос. Откройте страницу через Google Chrome.";
+            statusText.innerText = "Браузер не поддерживает голос. Используйте Google Chrome.";
         } else {
             const recognition = new SpeechRecognition();
-            recognition.lang = 'ru-RU'; // Слушаем русскую речь
+            recognition.lang = 'ru-RU';
             recognition.interimResults = false;
 
             startBtn.addEventListener('click', () => {
@@ -65,13 +64,19 @@
                 const phrase = event.results[0][0].transcript.toLowerCase();
                 recognizedText.innerText = `Вы сказали: "${phrase}"`;
                 
-                // Проверяем ключевые слова в твоей фразе
+                // Проверка команды 1: Открыть VS Code
                 if ((phrase.includes('открой') || phrase.includes('запусти')) && 
                     (phrase.includes('код') || phrase.includes('vs') || phrase.includes('вижуал'))) {
                     
-                    sendTrigger();
+                    sendTrigger('open-vscode');
+
+                // Проверка команды 2: Спящий режим
+                } else if (phrase.includes('спящий режим') || phrase.includes('усни') || phrase.includes('выключи')) {
+                    
+                    sendTrigger('sleep');
+
                 } else {
-                    statusText.innerText = "Команда не распознана. Скажите например: 'Открой VS Code'.";
+                    statusText.innerText = "Команда не распознана. Попробуйте 'Открой VS Code' или 'Спящий режим'.";
                 }
             };
 
@@ -83,21 +88,20 @@
             };
         }
 
-        // Функция отправки запроса на ноутбук
-        function sendTrigger() {
+        // Универсальная функция отправки запросов
+        function sendTrigger(endpoint) {
             statusText.innerText = "Отправляю сигнал на ноутбук...";
             
-            fetch(`http://${SERVER_IP}:${SERVER_PORT}/open-vscode`)
+            fetch(`http://${SERVER_IP}:${SERVER_PORT}/${endpoint}`)
                 .then(response => response.text())
                 .then(data => {
-                    statusText.innerText = "Готово! Ноутбук ответил: " + data;
+                    statusText.innerText = "Готово! ПК ответил: " + data;
                 })
                 .catch(err => {
-                    statusText.innerText = "Не удалось связаться с ноутбуком. Проверьте IP-адрес и Wi-Fi.";
+                    statusText.innerText = "Не удалось связаться с ноутбуком.";
                     console.error(err);
                 });
         }
     </script>
 </body>
 </html>
-
