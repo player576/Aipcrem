@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запуск VS Code</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #1e1e24;
+            color: #ffffff;
+            padding-top: 80px;
+        }
+        button {
+            padding: 25px 50px;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 12px;
+            border: none;
+            background: #007acc; /* Фирменный цвет VS Code */
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 122, 204, 0.4);
+            transition: 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        #status { margin-top: 30px; font-size: 20px; color: #a0a0a0; }
+        #text { font-weight: bold; color: #4fc1ff; font-size: 24px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>Голосовой запуск VS Code</h1>
+    <button id="start-btn">🎙️ Включить микрофон</button>
+    <p id="status">Нажмите кнопку и скажите команду</p>
+    <p id="text"></p>
+
+    <script>
+        // НАСТРОЙКА: Сюда впиши IP-адрес своего ноутбука
+        const SERVER_IP = '192.168.3.106'; 
+        const SERVER_PORT = '3000';
+
+        const startBtn = document.getElementById('start-btn');
+        const statusText = document.getElementById('status');
+        const recognizedText = document.getElementById('text');
+
+        // Подключаем распознавание речи браузера
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            statusText.innerText = "Браузер не поддерживает голос. Откройте страницу через Google Chrome.";
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ru-RU'; // Слушаем русскую речь
+            recognition.interimResults = false;
+
+            startBtn.addEventListener('click', () => {
+                recognition.start();
+                statusText.innerText = "Слушаю...";
+                recognizedText.innerText = "";
+            });
+
+            recognition.onresult = (event) => {
+                const phrase = event.results[0][0].transcript.toLowerCase();
+                recognizedText.innerText = `Вы сказали: "${phrase}"`;
+                
+                // Проверяем ключевые слова в твоей фразе
+                if ((phrase.includes('открой') || phrase.includes('запусти')) && 
+                    (phrase.includes('код') || phrase.includes('vs') || phrase.includes('вижуал'))) {
+                    
+                    sendTrigger();
+                } else {
+                    statusText.innerText = "Команда не распознана. Скажите например: 'Открой VS Code'.";
+                }
+            };
+
+            recognition.onerror = () => { statusText.innerText = "Ошибка доступа к микрофону."; };
+            recognition.onend = () => { 
+                if (statusText.innerText === "Слушаю...") {
+                    statusText.innerText = "Нажмите кнопку и говорите";
+                }
+            };
+        }
+
+        // Функция отправки запроса на ноутбук
+        function sendTrigger() {
+            statusText.innerText = "Отправляю сигнал на ноутбук...";
+            
+            fetch(`http://${SERVER_IP}:${SERVER_PORT}/open-vscode`)
+                .then(response => response.text())
+                .then(data => {
+                    statusText.innerText = "Готово! Ноутбук ответил: " + data;
+                })
+                .catch(err => {
+                    statusText.innerText = "Не удалось связаться с ноутбуком. Проверьте IP-адрес и Wi-Fi.";
+                    console.error(err);
+                });
+        }
+    </script>
+</body>
+</html>
+
